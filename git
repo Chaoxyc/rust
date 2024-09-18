@@ -1,0 +1,53 @@
+use std::process::Command;
+
+use anyhow::Result;
+
+pub fn main() {
+    let result = run();
+    match result {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {:?}", e);
+        }
+    }
+}
+
+fn run() -> Result<()> {
+    println!("Hello, world!");
+    //  Rust执行 Git 查看指定目录项目的每个月最后一次的提交记录，含提交记录md5，然后重置到这次提交的状态
+    //  --pretty=format:"%h %ad"
+    let path = "/Users/chaoitsm/Desktop/work/test/BaseRecyclerViewAdapterHelper/";
+    let result = Command::new("git")
+        .current_dir(path)
+        .arg("log")
+        .arg("--reverse")
+        .arg("--pretty=format:%h %ad")
+        .arg("--date=format:%Y-%m-%d")
+        // .arg("--all")
+        // .arg("--date-order")
+        // .arg("--reverse")
+        .output()?;
+    let output = String::from_utf8(result.stdout)?;
+    let lines: Vec<&str> = output.split("\n").collect();
+    let mut last_month = "".to_string();
+    for line in lines {
+        if line.len() > 0 {
+            let month = line.split("-").collect::<Vec<&str>>()[0..2].join("-");
+            if month != last_month {
+                last_month = month.clone();
+                println!("Reset to {}", line);
+                let hash = line.split(" ").collect::<Vec<&str>>()[0];
+                println!("Hash {}", hash);
+                let result = Command::new("git")
+                    .current_dir(path)
+                    .arg("reset")
+                    .arg("--hard")
+                    .arg(hash)
+                    .output()?;
+                println!("Reset Result {}", String::from_utf8(result.stdout)?);
+                break;
+            }
+        }
+    }
+    Ok(())
+}
